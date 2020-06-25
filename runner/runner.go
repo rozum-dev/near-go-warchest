@@ -94,13 +94,12 @@ func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult, 
 			seats := float64(runner.expectedStake) / float64(runner.expectedSeatPrice)
 			log.Printf("Expected seats: %f", seats)
 
-			offset := 500 // NEAR
+			// TODO: add delegator staked balance
+			offset := 20000 // NEAR
 			if seats >= 2.0 {
-				if leftBlocks < 700 {
-					log.Printf("You retain two or more seats: %f\n", seats)
-					// Run near unstake
-					runner.restake("unstake", runner.expectedStake, runner.expectedSeatPrice, offset, restakeGauge, stakeAmountGauge)
-				}
+				log.Printf("You retain two or more seats: %f\n", seats)
+				// Run near unstake
+				runner.restake("unstake", runner.expectedStake, runner.expectedSeatPrice, offset, restakeGauge, stakeAmountGauge)
 			} else if seats < 1.0 {
 				log.Printf("You don't have enough stake to get one seat: %f\n", seats)
 				// Run near stake
@@ -125,7 +124,7 @@ func (r *Runner) restake(method string, expectedStake, expectedSeatPrice, offset
 		newStakeStr = common.GetStringFromStake(newStake)
 	} else {
 		// unstake
-		newStake := expectedStake - expectedSeatPrice + offset
+		newStake := expectedStake - expectedSeatPrice - offset
 		newStakeStr = common.GetStringFromStake(newStake)
 	}
 	stakeAmountGauge.Set(float64(newStake))
@@ -141,10 +140,9 @@ func (r *Runner) restake(method string, expectedStake, expectedSeatPrice, offset
 }
 
 func runStake(poolId, method, amount, delegatorId string) error {
-	command := fmt.Sprintf(stakeCmd, poolId, method, amount, delegatorId)
-	_, err := cmd.Run(command)
+	_, err := cmd.Run(fmt.Sprintf(stakeCmd, poolId, method, amount, delegatorId))
 	if err != nil {
-		log.Printf("Failed to run %s", command)
+		log.Println(err)
 		return err
 	}
 	return nil
@@ -171,7 +169,6 @@ func getExpectedStake(accountId string) int {
 }
 
 func (r *Runner) fetchPrices(nextSeatPriceGauge, expectedSeatPriceGauge prometheus.Gauge) bool {
-	// Get next seat price
 	if r.currentSeatPrice == 0 {
 		// Current seat price
 		csp, err := getSeatPrice(currentSeatPriceCmd)

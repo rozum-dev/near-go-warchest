@@ -30,5 +30,5 @@ func GetIntFromString(s string) int {
 }
 
 func GetStringFromStake(stake int) string {
-	return fmt.Sprintf("%d%s", stake, "0000000000000000000000000")
+	return fmt.Sprintf("%d%s", stake, "000000000000000000000000")
 }

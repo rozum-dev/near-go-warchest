@@ -4,12 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"strings"
 )
 
 func Run(cmd string) (string, error) {
-	cmd = strings.Replace(cmd, `"`, "", -1)
-	out, err := exec.Command("bash", "-c", cmd).Output()
+	out, err := exec.Command("bash", "-c", cmd[1:len(cmd)-1]).Output()
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Failed to execute command: %s", cmd))
 	}
