@@ -21,6 +21,8 @@ type SubscrResult struct {
 	EpochStartHeight  int64
 	EpochLeight       int
 	CurrentStake      int
+	NextStake         int
+	ExpectedStake     int
 	KickedOut         bool
 }
 
@@ -84,6 +86,20 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 				}
 			}
 
+			var nextStake int
+			for _, v := range vr.Validators.NextValidators {
+				if v.AccountId == m.accountId {
+					nextStake = GetStakeFromString(v.Stake)
+				}
+			}
+
+			var expectedStake int
+			for _, v := range vr.Validators.CurrentProposals {
+				if v.AccountId == m.accountId {
+					expectedStake = GetStakeFromString(v.Stake)
+				}
+			}
+
 			epochStartHeight := vr.Validators.EpochStartHeight
 
 			r := &SubscrResult{
@@ -91,6 +107,8 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 				EpochStartHeight:  epochStartHeight,
 				EpochLeight:       epochLeight,
 				CurrentStake:      currentStake,
+				NextStake:         nextStake,
+				ExpectedStake:     expectedStake,
 				KickedOut:         kickedOut,
 			}
 

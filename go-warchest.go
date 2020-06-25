@@ -35,7 +35,7 @@ func main() {
 	leftBlocksGauge := prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "warchest_left_blocks",
-			Help: "Left Blocks",
+			Help: "The number of blocks left in the current epoch",
 		})
 	pingGauge := prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -50,12 +50,22 @@ func main() {
 	stakeAmountGauge := prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "warchest_stake_amount",
-			Help: "Stake amount",
+			Help: "The amount of stake",
 		})
 	nextSeatPriceGauge := prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "warchest_next_seat_price",
-			Help: "The next seat price (updated when no more than 1000 blocks remain before the end of the epoch)",
+			Help: "The next seat price",
+		})
+	expectedSeatPriceGauge := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "warchest_expected_seat_price",
+			Help: "The expected seat price",
+		})
+	expectedStakeGauge := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "warchest_expected_stake",
+			Help: "The expected stake",
 		})
 	thresholdGauge := prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -69,6 +79,8 @@ func main() {
 	registry.MustRegister(restakeGauge)
 	registry.MustRegister(stakeAmountGauge)
 	registry.MustRegister(nextSeatPriceGauge)
+	registry.MustRegister(expectedSeatPriceGauge)
+	registry.MustRegister(expectedStakeGauge)
 	registry.MustRegister(thresholdGauge)
 	// Run a metrics service
 	go runMetricsService(registry, *addr)
@@ -80,7 +92,7 @@ func main() {
 
 	runner := runner.NewRunner(*accountId, *delegatorId)
 	// Run a near-shell runner
-	runner.Run(ctx, resCh, leftBlocksGauge, pingGauge, restakeGauge, stakeAmountGauge, nextSeatPriceGauge)
+	runner.Run(ctx, resCh, leftBlocksGauge, pingGauge, restakeGauge, stakeAmountGauge, nextSeatPriceGauge, expectedSeatPriceGauge, expectedStakeGauge)
 }
 
 func runMetricsService(registry prometheus.Gatherer, addr string) {
