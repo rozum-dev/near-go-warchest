@@ -81,6 +81,7 @@ Add panels to monitor `near-go-warchest` metrics, you can add alerts for example
 | warchest_expected_stake | The expected stake |
 | warchest_threshold | The kickout threshold (%) |
 
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
