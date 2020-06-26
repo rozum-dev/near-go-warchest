@@ -72,6 +72,16 @@ func main() {
 			Name: "warchest_threshold",
 			Help: "The kickout threshold",
 		})
+	dStakedBalanceGauge := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "warchest_delegator_staked_balance",
+			Help: "The delegator staked balance",
+		})
+	dUnStakedBalanceGauge := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "warchest_delegator_unstaked_balance",
+			Help: "The delegator unstaked balance",
+		})
 
 	registry := prometheus.NewPedanticRegistry()
 	registry.MustRegister(leftBlocksGauge)
@@ -82,6 +92,8 @@ func main() {
 	registry.MustRegister(expectedSeatPriceGauge)
 	registry.MustRegister(expectedStakeGauge)
 	registry.MustRegister(thresholdGauge)
+	registry.MustRegister(dStakedBalanceGauge)
+	registry.MustRegister(dUnStakedBalanceGauge)
 	// Run a metrics service
 	go runMetricsService(registry, *addr)
 
@@ -92,7 +104,16 @@ func main() {
 
 	runner := runner.NewRunner(*accountId, *delegatorId)
 	// Run a near-shell runner
-	runner.Run(ctx, resCh, leftBlocksGauge, pingGauge, restakeGauge, stakeAmountGauge, nextSeatPriceGauge, expectedSeatPriceGauge, expectedStakeGauge)
+	runner.Run(ctx, resCh,
+		leftBlocksGauge,
+		pingGauge,
+		restakeGauge,
+		stakeAmountGauge,
+		nextSeatPriceGauge,
+		expectedSeatPriceGauge,
+		expectedStakeGauge,
+		dStakedBalanceGauge,
+		dUnStakedBalanceGauge)
 }
 
 func runMetricsService(registry prometheus.Gatherer, addr string) {

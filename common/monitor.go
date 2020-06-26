@@ -50,7 +50,7 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 			sr, err := m.client.Get("status", nil)
 			if err != nil {
 				fmt.Println(err)
-				return
+				continue
 			}
 
 			var epochLeight int
@@ -67,7 +67,8 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 
 			vr, err := m.client.Get("validators", []uint64{blockHeight})
 			if err != nil {
-				return
+				fmt.Println(err)
+				continue
 			}
 
 			kickedOut := true

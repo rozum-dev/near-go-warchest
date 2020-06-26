@@ -32,3 +32,17 @@ func GetIntFromString(s string) int {
 func GetStringFromStake(stake int) string {
 	return fmt.Sprintf("%d%s", stake, "000000000000000000000000")
 }
+
+func GetStakeFromNearView(s string) int {
+	s2 := strings.Split(s, "})")
+	if len(s2) > 1 {
+		s3 := s2[1]
+		s4 := strings.Split(s3, "m")
+		if len(s4) > 1 {
+			s5 := strings.Replace(s4[1], "'", "", -1)
+			s6 := s5[0 : len(s5)-4]
+			return GetStakeFromString(s6)
+		}
+	}
+	return 0
+}

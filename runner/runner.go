@@ -18,9 +18,12 @@ var (
 	currentSeatPriceCmd   = os.Getenv("CURRENT_SEAT_PRICE_CMD")
 	nextSeatPriceCmd      = os.Getenv("NEXT_SEAT_PRICE_CMD")
 	proposalsSeatPriceCmd = os.Getenv("PROPOSALS_SEAT_PRICE_CMD")
+	proposalsCmd          = os.Getenv("PROPOSALS_CMD")
 
-	stakeCmd     = os.Getenv("STAKE_CMD")
-	proposalsCmd = os.Getenv("PROPOSALS_CMD")
+	stakeCmd              = os.Getenv("STAKE_CMD")
+	getStakedBalanceCmd   = os.Getenv("GET_ACCOUNT_STAKED_BALANCE")
+	getUnStakedBalanceCmd = os.Getenv("GET_ACCOUNT_UNSTAKED_BALANCE")
+	// get_account_unstaked_balance
 
 	pingCmd = os.Getenv("PING_CMD")
 )
@@ -40,11 +43,22 @@ func NewRunner(accountId, delegatorId string) *Runner {
 	}
 }
 
-func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult, leftBlocksGauge, pingGauge, restakeGauge, stakeAmountGauge, nextSeatPriceGauge, expectedSeatPriceGauge, expectedStakeGauge prometheus.Gauge) {
+func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
+	leftBlocksGauge,
+	pingGauge,
+	restakeGauge,
+	stakeAmountGauge,
+	nextSeatPriceGauge,
+	expectedSeatPriceGauge,
+	expectedStakeGauge,
+	dStakedBalanceGauge,
+	dUnStakedBalanceGauge prometheus.Gauge) {
+
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
 
 	var epochStartHeight int64
+	var delegatorStakedBalance, delegatorUnStakedBalance int
 	for {
 		select {
 		case r := <-resCh:
@@ -66,6 +80,19 @@ func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult, 
 				log.Printf("Expected stake: %d\n", runner.expectedStake)
 				expectedStakeGauge.Set(float64(runner.expectedStake))
 			}
+			dsb, err := getDelegatorStakedBalance(runner.accountId, runner.delegatorId)
+			if err == nil {
+				delegatorStakedBalance = dsb
+				dStakedBalanceGauge.Set(float64(delegatorStakedBalance))
+			}
+			log.Printf("Delegator staked balance: %d\n", delegatorStakedBalance)
+
+			dusb, err := getDelegatorUnStakedBalance(runner.accountId, runner.delegatorId)
+			if err == nil {
+				delegatorUnStakedBalance = dusb
+				dUnStakedBalanceGauge.Set(float64(delegatorUnStakedBalance))
+			}
+			log.Printf("Delegator unstaked balance: %d\n", delegatorUnStakedBalance)
 
 			leftBlocksGauge.Set(float64(leftBlocks))
 			stakeAmountGauge.Set(float64(r.CurrentStake))
@@ -94,16 +121,23 @@ func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult, 
 			seats := float64(runner.expectedStake) / float64(runner.expectedSeatPrice)
 			log.Printf("Expected seats: %f", seats)
 
-			// TODO: add delegator staked balance
-			offset := 20000 // NEAR
+			offset := 10 // NEAR
 			if seats >= 2.0 {
 				log.Printf("You retain two or more seats: %f\n", seats)
-				// Run near unstake
-				runner.restake("unstake", runner.expectedStake, runner.expectedSeatPrice, offset, restakeGauge, stakeAmountGauge)
+				if leftBlocks < 1000 {
+					// Run near unstake
+					runner.restake("unstake", runner.expectedStake, delegatorStakedBalance, runner.expectedSeatPrice, offset, restakeGauge, stakeAmountGauge)
+				} else {
+					log.Printf("I will unstake later, there are still %d blocks left", leftBlocks)
+				}
 			} else if seats < 1.0 {
 				log.Printf("You don't have enough stake to get one seat: %f\n", seats)
-				// Run near stake
-				runner.restake("stake", runner.expectedStake, runner.expectedSeatPrice, offset, restakeGauge, stakeAmountGauge)
+				if leftBlocks < 1000 {
+					// Run near stake
+					runner.restake("stake", runner.expectedStake, delegatorUnStakedBalance, runner.expectedSeatPrice, offset, restakeGauge, stakeAmountGauge)
+				} else {
+					log.Printf("I will stake later, there are still %d blocks left", leftBlocks)
+				}
 			} else if seats >= 1.0 && seats < 2.0 {
 				log.Println("I'm okay")
 			}
@@ -116,15 +150,35 @@ func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult, 
 	}
 }
 
-func (r *Runner) restake(method string, expectedStake, expectedSeatPrice, offset int, restakeGauge, stakeAmountGauge prometheus.Gauge) bool {
+func getDelegatorStakedBalance(poolId, delegatorId string) (int, error) {
+	r, err := cmd.Run(fmt.Sprintf(getStakedBalanceCmd, poolId, delegatorId))
+	if err != nil {
+		return 0, err
+	}
+	return common.GetStakeFromNearView(r), nil
+}
+
+func getDelegatorUnStakedBalance(poolId, delegatorId string) (int, error) {
+	r, err := cmd.Run(fmt.Sprintf(getUnStakedBalanceCmd, poolId, delegatorId))
+	if err != nil {
+		return 0, err
+	}
+	return common.GetStakeFromNearView(r), nil
+}
+
+func (r *Runner) restake(method string, expectedStake, delegatorBalance, expectedSeatPrice, offset int, restakeGauge, stakeAmountGauge prometheus.Gauge) bool {
 	var newStakeStr string
 	var newStake int
 	if method == "stake" {
 		newStake = expectedSeatPrice - expectedStake + offset
 		newStakeStr = common.GetStringFromStake(newStake)
+		if newStake > delegatorBalance {
+			log.Printf("Not enough balance to stake %d NEAR\n", newStake)
+			return false
+		}
 	} else {
 		// unstake
-		newStake := expectedStake - expectedSeatPrice - offset
+		newStake = delegatorBalance - offset
 		newStakeStr = common.GetStringFromStake(newStake)
 	}
 	stakeAmountGauge.Set(float64(newStake))

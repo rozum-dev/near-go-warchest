@@ -64,7 +64,7 @@ Here is an example `prometheus.yml`.
 ```
 ## Grafana
 
-Add panels to monitor `near-go-warchest` metrics, you can add alerts for example if `warchest_restake` or `warchest_ping` not was invoked.
+Нou can add alerts for the metrics listed below.
 
 ![](https://raw.githubusercontent.com/masknetgoal634/near-go-warchest/master/img/dashboard.png)
 
@@ -80,6 +80,8 @@ Add panels to monitor `near-go-warchest` metrics, you can add alerts for example
 | warchest_expected_seat_price | The expected seat price |
 | warchest_expected_stake | The expected stake |
 | warchest_threshold | The kickout threshold (%) |
+| warchest_delegator_staked_balance | The delegator staked balance |
+| warchest_delegator_unstaked_balance | The delegator unstaked balance |
 
 ## License
 
