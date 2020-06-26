@@ -71,7 +71,7 @@ type Client struct {
 }
 
 func NewClient(endpoint string) *Client {
-	timeout := time.Duration(15 * time.Second)
+	timeout := time.Duration(10 * time.Second)
 	httpClient := &http.Client{
 		Timeout: timeout,
 	}
@@ -106,6 +106,7 @@ func (c *Client) do(method string, params interface{}) (string, error) {
 	}
 	req, err := http.NewRequest("POST", c.Endpoint, bytes.NewBuffer(payload))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Add("User-Agent", "Go-Warchest Bot")
 	if err != nil {
 		log.Fatalln(err)
 	}

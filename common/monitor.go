@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"time"
 
@@ -39,13 +38,13 @@ func NewMonitor(client *nearapi.Client, accountId string) *Monitor {
 }
 
 func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdGauge prometheus.Gauge) {
-	t := rand.Int31n(int32(GetIntFromString(repeatTime)))
+	t := GetIntFromString(repeatTime)
 	ticker := time.NewTicker(time.Duration(t) * time.Second)
-	log.Printf("Subscribed for updates every %s sec\n", repeatTime)
+	log.Printf("Subscribed for updates every %s seconds\n", repeatTime)
 	for {
 		select {
 		case <-ticker.C:
-			// Watch every ~180 sec
+			// Watch every 60 sec
 			log.Println("Starting watch rpc")
 			sr, err := m.client.Get("status", nil)
 			if err != nil {

@@ -121,12 +121,11 @@ func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 			seats := float64(runner.expectedStake) / float64(runner.expectedSeatPrice)
 			log.Printf("Expected seats: %f", seats)
 
-			offset := 10 // NEAR
 			if seats >= 2.0 {
 				log.Printf("You retain two or more seats: %f\n", seats)
 				if leftBlocks < 1000 {
 					// Run near unstake
-					runner.restake("unstake", runner.expectedStake, delegatorStakedBalance, runner.expectedSeatPrice, offset, restakeGauge, stakeAmountGauge)
+					runner.restake("unstake", runner.expectedStake, delegatorStakedBalance, runner.expectedSeatPrice, restakeGauge, stakeAmountGauge)
 				} else {
 					log.Printf("I will unstake later, there are still %d blocks left", leftBlocks)
 				}
@@ -134,7 +133,7 @@ func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 				log.Printf("You don't have enough stake to get one seat: %f\n", seats)
 				if leftBlocks < 1000 {
 					// Run near stake
-					runner.restake("stake", runner.expectedStake, delegatorUnStakedBalance, runner.expectedSeatPrice, offset, restakeGauge, stakeAmountGauge)
+					runner.restake("stake", runner.expectedStake, delegatorUnStakedBalance, runner.expectedSeatPrice, restakeGauge, stakeAmountGauge)
 				} else {
 					log.Printf("I will stake later, there are still %d blocks left", leftBlocks)
 				}
@@ -166,24 +165,27 @@ func getDelegatorUnStakedBalance(poolId, delegatorId string) (int, error) {
 	return common.GetStakeFromNearView(r), nil
 }
 
-func (r *Runner) restake(method string, expectedStake, delegatorBalance, expectedSeatPrice, offset int, restakeGauge, stakeAmountGauge prometheus.Gauge) bool {
+func (r *Runner) restake(method string, expectedStake, delegatorBalance, expectedSeatPrice int, restakeGauge, stakeAmountGauge prometheus.Gauge) bool {
 	var newStakeStr string
 	var newStake int
+
 	if method == "stake" {
-		newStake = expectedSeatPrice - expectedStake + offset
-		newStakeStr = common.GetStringFromStake(newStake)
+		newStake = expectedSeatPrice - expectedStake + 1
 		if newStake > delegatorBalance {
 			log.Printf("Not enough balance to stake %d NEAR\n", newStake)
 			return false
 		}
 	} else {
 		// unstake
-		newStake = delegatorBalance - offset
-		newStakeStr = common.GetStringFromStake(newStake)
+		offset := 100
+		for newStake < delegatorBalance-offset && expectedStake-newStake > expectedSeatPrice+offset {
+			newStake += offset
+		}
 	}
+	newStakeStr = common.GetStringFromStake(newStake)
 	stakeAmountGauge.Set(float64(newStake))
 
-	log.Printf("Starting %s...\n", method)
+	log.Printf("Starting %s %d...\n", method, newStake)
 	err2 := runStake(r.accountId, method, newStakeStr, r.delegatorId)
 	if err2 != nil {
 		return false
