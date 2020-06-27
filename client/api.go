@@ -2,10 +2,12 @@ package nearapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -68,16 +70,26 @@ type Result struct {
 type Client struct {
 	httpClient *http.Client
 	Endpoint   string
+	ctx        context.Context
 }
 
-func NewClient(endpoint string) *Client {
-	timeout := time.Duration(10 * time.Second)
+func NewClientWithContext(ctx context.Context, endpoint string) *Client {
+	var netTransport = &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout: 12 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 12 * time.Second,
+	}
+
+	timeout := time.Duration(12 * time.Second)
 	httpClient := &http.Client{
-		Timeout: timeout,
+		Timeout:   timeout,
+		Transport: netTransport,
 	}
 	return &Client{
 		Endpoint:   endpoint,
 		httpClient: httpClient,
+		ctx:        ctx,
 	}
 }
 
@@ -104,7 +116,11 @@ func (c *Client) do(method string, params interface{}) (string, error) {
 			log.Println(err)
 		}
 	}
+	ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
+	defer cancel()
+
 	req, err := http.NewRequest("POST", c.Endpoint, bytes.NewBuffer(payload))
+	req.WithContext(ctx)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("User-Agent", "Go-Warchest Bot")
 	if err != nil {
@@ -113,12 +129,14 @@ func (c *Client) do(method string, params interface{}) (string, error) {
 
 	r, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		log.Printf("Failed to connect to %s\n", c.Endpoint)
+		return "", nil
 	}
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Fatalln(err)
+		log.Printf("Failed to read body: %s\n", c.Endpoint)
+		return "", nil
 	}
 	return string(body), nil
 }

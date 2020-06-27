@@ -29,7 +29,7 @@ func main() {
 		flag.Usage()
 	}
 
-	client := nearapi.NewClient(*url)
+	client := nearapi.NewClientWithContext(ctx, *url)
 
 	// Prometheus metrics
 	leftBlocksGauge := prometheus.NewGauge(
