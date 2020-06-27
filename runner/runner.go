@@ -33,6 +33,7 @@ type Runner struct {
 	restaked                                           bool
 	currentSeatPrice, nextSeatPrice, expectedSeatPrice int
 	expectedStake                                      int
+	rpcSuccess, rpcFailed                              int
 }
 
 func NewRunner(accountId, delegatorId string) *Runner {
@@ -42,7 +43,7 @@ func NewRunner(accountId, delegatorId string) *Runner {
 	}
 }
 
-func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
+func (r *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 	leftBlocksGauge,
 	pingGauge,
 	restakeGauge,
@@ -58,35 +59,54 @@ func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 
 	var epochStartHeight int64
 	var delegatorStakedBalance, delegatorUnStakedBalance int
+	var leftBlocksPrev, estimatedBlocksCountPerReq int // per 90 sec
 	for {
 		select {
-		case r := <-resCh:
-			if epochStartHeight == 0 {
-				epochStartHeight = r.EpochStartHeight
+		case res := <-resCh:
+			if res.Err != nil {
+				r.rpcFailed++
+				log.Println("Failed to connect to RPC")
+				if r.rpcSuccess > 0 {
+					log.Println("Using cache...")
+					res.LatestBlockHeight = res.LatestBlockHeight + int64(estimatedBlocksCountPerReq)
+					// Estimated new epoch
+					if res.LatestBlockHeight >= res.EpochStartHeight+int64(res.EpochLength) {
+						res.EpochStartHeight += int64(res.EpochLength)
+					}
+				} else {
+					continue
+				}
 			}
-			leftBlocks := int(r.EpochStartHeight) - int(r.LatestBlockHeight) + r.EpochLeight
-			log.Printf("LatestBlockHeight: %d\n", r.LatestBlockHeight)
-			log.Printf("EpochStartHeight: %d\n", r.EpochStartHeight)
+			r.rpcSuccess++
+			if epochStartHeight == 0 {
+				epochStartHeight = res.EpochStartHeight
+				leftBlocksPrev = int(res.EpochStartHeight) - int(res.LatestBlockHeight) + res.EpochLength
+			}
+			leftBlocks := int(res.EpochStartHeight) - int(res.LatestBlockHeight) + res.EpochLength
+			estimatedBlocksCountPerReq = leftBlocksPrev - leftBlocks
+			leftBlocksPrev = leftBlocks
+			log.Printf("LatestBlockHeight: %d\n", res.LatestBlockHeight)
+			log.Printf("EpochStartHeight: %d\n", res.EpochStartHeight)
 			log.Printf("Left Blocks: %d\n", leftBlocks)
-			if r.KickedOut {
+			if res.KickedOut {
 				continue
 			}
-			log.Printf("Current stake: %d\n", r.CurrentStake)
-			log.Printf("Next stake: %d\n", r.NextStake)
+			log.Printf("Current stake: %d\n", res.CurrentStake)
+			log.Printf("Next stake: %d\n", res.NextStake)
 
-			runner.expectedStake = getExpectedStake(runner.accountId)
-			if runner.expectedStake != 0 {
-				log.Printf("Expected stake: %d\n", runner.expectedStake)
-				expectedStakeGauge.Set(float64(runner.expectedStake))
+			r.expectedStake = getExpectedStake(r.accountId)
+			if r.expectedStake != 0 {
+				log.Printf("Expected stake: %d\n", r.expectedStake)
+				expectedStakeGauge.Set(float64(r.expectedStake))
 			}
-			dsb, err := getDelegatorStakedBalance(runner.accountId, runner.delegatorId)
+			dsb, err := getDelegatorStakedBalance(r.accountId, r.delegatorId)
 			if err == nil {
 				delegatorStakedBalance = dsb
 				dStakedBalanceGauge.Set(float64(delegatorStakedBalance))
 			}
 			log.Printf("Delegator staked balance: %d\n", delegatorStakedBalance)
 
-			dusb, err := getDelegatorUnStakedBalance(runner.accountId, runner.delegatorId)
+			dusb, err := getDelegatorUnStakedBalance(r.accountId, r.delegatorId)
 			if err == nil {
 				delegatorUnStakedBalance = dusb
 				dUnStakedBalanceGauge.Set(float64(delegatorUnStakedBalance))
@@ -94,47 +114,47 @@ func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 			log.Printf("Delegator unstaked balance: %d\n", delegatorUnStakedBalance)
 
 			leftBlocksGauge.Set(float64(leftBlocks))
-			stakeAmountGauge.Set(float64(r.CurrentStake))
+			stakeAmountGauge.Set(float64(res.CurrentStake))
 			restakeGauge.Set(0)
 			pingGauge.Set(0)
 
-			if epochStartHeight != r.EpochStartHeight {
+			if epochStartHeight != res.EpochStartHeight {
 				// New epoch
 				// If the new epoch then ping
 				log.Println("Starting ping...")
-				command := fmt.Sprintf(pingCmd, runner.accountId, runner.delegatorId)
+				command := fmt.Sprintf(pingCmd, r.accountId, r.delegatorId)
 				_, err := cmd.Run(command)
 				if err != nil {
 					pingGauge.Set(0)
 				} else {
 					log.Printf("Success: %s\n", command)
-					epochStartHeight = r.EpochStartHeight
-					pingGauge.Set(float64(r.CurrentStake))
+					epochStartHeight = res.EpochStartHeight
+					pingGauge.Set(float64(res.CurrentStake))
 				}
 			}
 
-			if !runner.fetchPrices(nextSeatPriceGauge, expectedSeatPriceGauge) {
+			if !r.fetchPrices(nextSeatPriceGauge, expectedSeatPriceGauge) {
 				continue
 			}
 			// Seats calculation
-			seats := float64(runner.expectedStake) / float64(runner.expectedSeatPrice)
+			seats := float64(r.expectedStake) / float64(r.expectedSeatPrice)
 			log.Printf("Expected seats: %f", seats)
 
 			if seats >= 2.0 {
 				log.Printf("You retain %f seats\n", seats)
-				tokensAmount := getTokensAmountToRestake("unstake", runner.expectedStake, delegatorStakedBalance, runner.expectedSeatPrice)
+				tokensAmount := getTokensAmountToRestake("unstake", r.expectedStake, delegatorStakedBalance, r.expectedSeatPrice)
 				if leftBlocks < 1000 {
 					// Run near unstake
-					runner.restake("unstake", tokensAmount, restakeGauge, stakeAmountGauge)
+					r.restake("unstake", tokensAmount, restakeGauge, stakeAmountGauge)
 				} else {
 					log.Printf("I will unstake %d later, there are still %d blocks left", tokensAmount, leftBlocks)
 				}
 			} else if seats < 1.0 {
 				log.Printf("You don't have enough stake to get one seat: %f\n", seats)
-				tokensAmount := getTokensAmountToRestake("stake", runner.expectedStake, delegatorStakedBalance, runner.expectedSeatPrice)
+				tokensAmount := getTokensAmountToRestake("stake", r.expectedStake, delegatorStakedBalance, r.expectedSeatPrice)
 				if leftBlocks < 1000 {
 					// Run near stake
-					runner.restake("stake", tokensAmount, restakeGauge, stakeAmountGauge)
+					r.restake("stake", tokensAmount, restakeGauge, stakeAmountGauge)
 				} else {
 					log.Printf("I will stake %d later, there are still %d blocks left", tokensAmount, leftBlocks)
 				}
@@ -148,40 +168,6 @@ func (runner *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 			os.Exit(0)
 		}
 	}
-}
-
-func getDelegatorStakedBalance(poolId, delegatorId string) (int, error) {
-	r, err := cmd.Run(fmt.Sprintf(getStakedBalanceCmd, poolId, delegatorId))
-	if err != nil {
-		return 0, err
-	}
-	return common.GetStakeFromNearView(r), nil
-}
-
-func getDelegatorUnStakedBalance(poolId, delegatorId string) (int, error) {
-	r, err := cmd.Run(fmt.Sprintf(getUnStakedBalanceCmd, poolId, delegatorId))
-	if err != nil {
-		return 0, err
-	}
-	return common.GetStakeFromNearView(r), nil
-}
-
-func getTokensAmountToRestake(method string, expectedStake, delegatorBalance, expectedSeatPrice int) int {
-	var tokensAmount int
-	if method == "stake" {
-		tokensAmount = expectedSeatPrice - expectedStake + 1
-		if tokensAmount > delegatorBalance {
-			log.Printf("Not enough balance to stake %d NEAR\n", tokensAmount)
-			return 0
-		}
-	} else {
-		// unstake
-		offset := 100
-		for tokensAmount < delegatorBalance-offset && expectedStake-tokensAmount > expectedSeatPrice+offset {
-			tokensAmount += offset
-		}
-	}
-	return tokensAmount
 }
 
 func (r *Runner) restake(method string, tokensAmount int, restakeGauge, stakeAmountGauge prometheus.Gauge) bool {
@@ -280,4 +266,38 @@ func getSeatPrice(command string) (int, error) {
 		return 0, err
 	}
 	return common.GetIntFromString(r), nil
+}
+
+func getDelegatorStakedBalance(poolId, delegatorId string) (int, error) {
+	r, err := cmd.Run(fmt.Sprintf(getStakedBalanceCmd, poolId, delegatorId))
+	if err != nil {
+		return 0, err
+	}
+	return common.GetStakeFromNearView(r), nil
+}
+
+func getDelegatorUnStakedBalance(poolId, delegatorId string) (int, error) {
+	r, err := cmd.Run(fmt.Sprintf(getUnStakedBalanceCmd, poolId, delegatorId))
+	if err != nil {
+		return 0, err
+	}
+	return common.GetStakeFromNearView(r), nil
+}
+
+func getTokensAmountToRestake(method string, expectedStake, delegatorBalance, expectedSeatPrice int) int {
+	var tokensAmount int
+	if method == "stake" {
+		tokensAmount = expectedSeatPrice - expectedStake + 1
+		if tokensAmount > delegatorBalance {
+			log.Printf("Not enough balance to stake %d NEAR\n", tokensAmount)
+			return 0
+		}
+	} else {
+		// unstake
+		offset := 100
+		for tokensAmount < delegatorBalance-offset && expectedStake-tokensAmount > expectedSeatPrice+offset {
+			tokensAmount += offset
+		}
+	}
+	return tokensAmount
 }

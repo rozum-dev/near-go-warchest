@@ -18,16 +18,18 @@ var (
 type SubscrResult struct {
 	LatestBlockHeight int64
 	EpochStartHeight  int64
-	EpochLeight       int
+	EpochLength       int
 	CurrentStake      int
 	NextStake         int
-	ExpectedStake     int
 	KickedOut         bool
+	Err               error
 }
 
 type Monitor struct {
 	client    *nearapi.Client
 	accountId string
+	// cache
+	result *SubscrResult
 }
 
 func NewMonitor(client *nearapi.Client, accountId string) *Monitor {
@@ -44,22 +46,23 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 	for {
 		select {
 		case <-ticker.C:
-			// Watch every 60 sec
 			log.Println("Starting watch rpc")
 			sr, err := m.client.Get("status", nil)
 			if err != nil {
 				fmt.Println(err)
+				m.result.Err = err
+				result <- m.result
 				continue
 			}
 
-			var epochLeight int
+			var epochLength int
 			switch sr.Status.ChainId {
 			case "betanet":
-				epochLeight = 10000
+				epochLength = 10000
 			case "testnet":
-				epochLeight = 43200
+				epochLength = 43200
 			case "mainnet":
-				epochLeight = 43200
+				epochLength = 43200
 			}
 
 			blockHeight := sr.Status.SyncInfo.LatestBlockHeight
@@ -67,6 +70,8 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 			vr, err := m.client.Get("validators", []uint64{blockHeight})
 			if err != nil {
 				fmt.Println(err)
+				m.result.Err = err
+				result <- m.result
 				continue
 			}
 
@@ -93,26 +98,17 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 				}
 			}
 
-			var expectedStake int
-			for _, v := range vr.Validators.CurrentProposals {
-				if v.AccountId == m.accountId {
-					expectedStake = GetStakeFromString(v.Stake)
-				}
-			}
-
-			epochStartHeight := vr.Validators.EpochStartHeight
-
-			r := &SubscrResult{
+			m.result = &SubscrResult{
 				LatestBlockHeight: int64(blockHeight),
-				EpochStartHeight:  epochStartHeight,
-				EpochLeight:       epochLeight,
+				EpochStartHeight:  vr.Validators.EpochStartHeight,
+				EpochLength:       epochLength,
 				CurrentStake:      currentStake,
 				NextStake:         nextStake,
-				ExpectedStake:     expectedStake,
 				KickedOut:         kickedOut,
+				Err:               nil,
 			}
 
-			result <- r
+			result <- m.result
 
 		case <-ctx.Done():
 			ticker.Stop()
