@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -26,16 +25,15 @@ type SubscrResult struct {
 }
 
 type Monitor struct {
-	client    *nearapi.Client
-	accountId string
-	// cache
+	client *nearapi.Client
+	poolId string
 	result *SubscrResult
 }
 
-func NewMonitor(client *nearapi.Client, accountId string) *Monitor {
+func NewMonitor(client *nearapi.Client, poolId string) *Monitor {
 	return &Monitor{
-		client:    client,
-		accountId: accountId,
+		client: client,
+		poolId: poolId,
 	}
 }
 
@@ -49,7 +47,7 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 			log.Println("Starting watch rpc")
 			sr, err := m.client.Get("status", nil)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				m.result.Err = err
 				result <- m.result
 				continue
@@ -69,22 +67,20 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 
 			vr, err := m.client.Get("validators", []uint64{blockHeight})
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				m.result.Err = err
 				result <- m.result
 				continue
 			}
 
-			kickedOut := true
 			var currentStake int
 			for _, v := range vr.Validators.CurrentValidators {
-				if v.AccountId == m.accountId {
+				if v.AccountId == m.poolId {
 					pb := float64(v.NumProducedBlocks)
 					eb := float64(v.NumExpectedBlocks)
 					threshold := (pb / eb) * 100
 					if threshold > 90.0 {
 						log.Printf("Kicked out threshold: %f\n", threshold)
-						kickedOut = false
 					}
 					thresholdGauge.Set(threshold)
 					currentStake = GetStakeFromString(v.Stake)
@@ -93,8 +89,16 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 
 			var nextStake int
 			for _, v := range vr.Validators.NextValidators {
-				if v.AccountId == m.accountId {
+				if v.AccountId == m.poolId {
 					nextStake = GetStakeFromString(v.Stake)
+				}
+			}
+
+			kickedOut := false
+			for _, v := range vr.Validators.PrevEpochKickOut {
+				if v.AccountId == m.poolId {
+					kickedOut = true
+					log.Printf("Was kicked out :(\n")
 				}
 			}
 

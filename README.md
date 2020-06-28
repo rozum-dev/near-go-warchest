@@ -24,7 +24,7 @@ sudo docker run -dti \
      --network=host \
      --env-file env.list \
      -p 9444:9444 \ 
-     masknetgoal634/near-go-warchest:latest /dist/go-warchest -accountId <YOUR_POOL_ID> -delegatorId <YOUR_DELEGATOR_ID>
+     masknetgoal634/near-go-warchest:latest /dist/go-warchest -accountId <YOUR_POOL_ID> -delegatorId <YOUR_DELEGATOR1_ID> -delegatorId <YOUR_DELEGATOR2_ID>
 ```
 
 To watch the logs: 

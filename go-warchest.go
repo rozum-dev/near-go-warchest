@@ -14,6 +14,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+type arrayFlags []string
+
+func (i *arrayFlags) String() string {
+	return "delegator ids"
+}
+
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+var delegatorIds arrayFlags
+
 func main() {
 	log.Println("Go-Warchest started...")
 	ctx, cancel := context.WithCancel(context.Background())
@@ -21,8 +34,8 @@ func main() {
 
 	url := flag.String("url", "https://rpc.betanet.near.org", "Near JSON-RPC URL")
 	addr := flag.String("addr", ":9444", "listen address")
-	accountId := flag.String("accountId", "test", "Validator pool account id")
-	delegatorId := flag.String("delegatorId", "test", "Delegator account id")
+	poolId := flag.String("accountId", "test", "Validator pool account id")
+	flag.Var(&delegatorIds, "delegatorId", "Delegator ids.")
 
 	flag.Parse()
 	if len(flag.Args()) > 0 {
@@ -97,12 +110,12 @@ func main() {
 	// Run a metrics service
 	go runMetricsService(registry, *addr)
 
-	monitor := common.NewMonitor(client, *accountId)
+	monitor := common.NewMonitor(client, *poolId)
 	resCh := make(chan *common.SubscrResult)
 	// Run a remote rpc monitor
 	go monitor.Run(ctx, resCh, thresholdGauge)
 
-	runner := runner.NewRunner(*accountId, *delegatorId)
+	runner := runner.NewRunner(*poolId, delegatorIds)
 	// Run a near-shell runner
 	runner.Run(ctx, resCh,
 		leftBlocksGauge,
