@@ -354,6 +354,9 @@ func getTokensAmountToRestake(method string, delegatorBalances map[string]int, e
 				sumOfStake += v.delegatorBalance
 				if sumOfStake > tokensAmount {
 					overage := sumOfStake - tokensAmount
+					if v.delegatorBalance-overage == 0 {
+						return tokensAmountMap
+					}
 					tokensAmountMap[v.delegatorId] = v.delegatorBalance - overage
 					return tokensAmountMap
 				}
