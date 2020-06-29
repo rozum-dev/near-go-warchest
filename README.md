@@ -64,7 +64,7 @@ Here is an example `prometheus.yml`.
 ```
 ## Grafana
 
-Нou can add alerts for the metrics listed below.
+You can add alerts for the metrics listed below.
 
 ![](https://raw.githubusercontent.com/masknetgoal634/near-go-warchest/master/img/dashboard.png)
 
