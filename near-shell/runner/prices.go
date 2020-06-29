@@ -1,0 +1,60 @@
+package runner
+
+import (
+	"log"
+
+	"github.com/masknetgoal634/go-warchest/common"
+	cmd "github.com/masknetgoal634/go-warchest/helpers"
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+func (r *Runner) fetchPrices(nextSeatPriceGauge, expectedSeatPriceGauge prometheus.Gauge) bool {
+	if r.currentSeatPrice == 0 {
+		// Current seat price
+		csp, err := getSeatPrice(currentSeatPriceCmd)
+		if err != nil {
+			log.Println("Failed to get currentSeatPrice")
+			if r.currentSeatPrice == 0 {
+				return false
+			}
+		} else {
+			r.currentSeatPrice = csp
+		}
+		log.Printf("Current seat price %d\n", r.currentSeatPrice)
+	}
+	// Next seat price
+	nsp, err := getSeatPrice(nextSeatPriceCmd)
+	if err != nil {
+		log.Println("Failed to get nextSeatPrice")
+		if r.nextSeatPrice == 0 {
+			return false
+		}
+	} else {
+		r.nextSeatPrice = nsp
+	}
+	log.Printf("Next seat price %d\n", r.nextSeatPrice)
+	nextSeatPriceGauge.Set(float64(r.nextSeatPrice))
+
+	// Expected seat price
+	esp, err := getSeatPrice(proposalsSeatPriceCmd)
+	if err != nil {
+		log.Println("Failed to get expectedSeatPrice")
+		if r.expectedSeatPrice == 0 {
+			return false
+		}
+	} else {
+		r.expectedSeatPrice = esp
+	}
+	log.Printf("Expected seat price %d\n", r.expectedSeatPrice)
+	expectedSeatPriceGauge.Set(float64(r.expectedSeatPrice))
+	return true
+}
+
+func getSeatPrice(command string) (int, error) {
+	r, err := cmd.Run(command)
+	if err != nil {
+		log.Printf("Failed to run %s", command)
+		return 0, err
+	}
+	return common.GetIntFromString(r), nil
+}

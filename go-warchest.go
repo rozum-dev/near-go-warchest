@@ -4,15 +4,12 @@ import (
 	"context"
 	"flag"
 	"log"
-	"net/http"
-	"os"
 
 	"github.com/masknetgoal634/go-warchest/common"
+	"github.com/masknetgoal634/go-warchest/near-shell/runner"
 	"github.com/masknetgoal634/go-warchest/rpc"
 	nearapi "github.com/masknetgoal634/go-warchest/rpc/client"
-	"github.com/masknetgoal634/go-warchest/runner"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	prom "github.com/masknetgoal634/go-warchest/services/prometheus"
 )
 
 type arrayFlags []string
@@ -46,98 +43,18 @@ func main() {
 	client := nearapi.NewClientWithContext(ctx, *url)
 
 	// Prometheus metrics
-	leftBlocksGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "warchest_left_blocks",
-			Help: "The number of blocks left in the current epoch",
-		})
-	pingGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "warchest_ping",
-			Help: "Near ping",
-		})
-	restakeGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "warchest_restake",
-			Help: "Near stake/unstake event",
-		})
-	stakeAmountGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "warchest_stake_amount",
-			Help: "The amount of stake",
-		})
-	nextSeatPriceGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "warchest_next_seat_price",
-			Help: "The next seat price",
-		})
-	expectedSeatPriceGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "warchest_expected_seat_price",
-			Help: "The expected seat price",
-		})
-	expectedStakeGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "warchest_expected_stake",
-			Help: "The expected stake",
-		})
-	thresholdGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "warchest_threshold",
-			Help: "The kickout threshold",
-		})
-	dStakedBalanceGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "warchest_delegator_staked_balance",
-			Help: "The delegator staked balance",
-		})
-	dUnStakedBalanceGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "warchest_delegator_unstaked_balance",
-			Help: "The delegator unstaked balance",
-		})
-
-	registry := prometheus.NewPedanticRegistry()
-	registry.MustRegister(leftBlocksGauge)
-	registry.MustRegister(pingGauge)
-	registry.MustRegister(restakeGauge)
-	registry.MustRegister(stakeAmountGauge)
-	registry.MustRegister(nextSeatPriceGauge)
-	registry.MustRegister(expectedSeatPriceGauge)
-	registry.MustRegister(expectedStakeGauge)
-	registry.MustRegister(thresholdGauge)
-	registry.MustRegister(dStakedBalanceGauge)
-	registry.MustRegister(dUnStakedBalanceGauge)
+	promMetrics := prom.NewPromMetrics()
 	// Run a metrics service
-	go runMetricsService(registry, *addr)
+	go promMetrics.RunMetricsService(*addr)
 
-	monitor := rpc.NewMonitor(client, *poolId)
+	rpcMonitor := rpc.NewMonitor(client, *poolId)
 	resCh := make(chan *rpc.SubscrResult)
 	// Quota for a concurrent rpc requests
 	sem := make(common.Sem, 1)
 	// Run a remote rpc monitor
-	go monitor.Run(ctx, resCh, sem, thresholdGauge)
+	go rpcMonitor.Run(ctx, resCh, sem, promMetrics)
 
-	runner := runner.NewRunner(*poolId, delegatorIds)
 	// Run a near-shell runner
-	runner.Run(ctx, resCh,
-		leftBlocksGauge,
-		pingGauge,
-		restakeGauge,
-		stakeAmountGauge,
-		nextSeatPriceGauge,
-		expectedSeatPriceGauge,
-		expectedStakeGauge,
-		dStakedBalanceGauge,
-		dUnStakedBalanceGauge,
-		sem)
-}
-
-func runMetricsService(registry prometheus.Gatherer, addr string) {
-	handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{
-		ErrorLog:      log.New(os.Stderr, log.Prefix(), log.Flags()),
-		ErrorHandling: promhttp.ContinueOnError,
-	})
-	http.Handle("/metrics", handler)
-	log.Fatal(http.ListenAndServe(addr, nil))
+	runner := runner.NewRunner(*poolId, delegatorIds)
+	runner.Run(ctx, resCh, promMetrics, sem)
 }
