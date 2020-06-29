@@ -12,6 +12,7 @@ import (
 
 	"github.com/masknetgoal634/go-warchest/common"
 	cmd "github.com/masknetgoal634/go-warchest/helpers"
+	"github.com/masknetgoal634/go-warchest/rpc"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -57,7 +58,7 @@ func NewRunner(poolId string, delegatorIds []string) *Runner {
 	}
 }
 
-func (r *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
+func (r *Runner) Run(ctx context.Context, resCh chan *rpc.SubscrResult,
 	leftBlocksGauge,
 	pingGauge,
 	restakeGauge,
@@ -66,7 +67,8 @@ func (r *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 	expectedSeatPriceGauge,
 	expectedStakeGauge,
 	dStakedBalanceGauge,
-	dUnStakedBalanceGauge prometheus.Gauge) {
+	dUnStakedBalanceGauge prometheus.Gauge,
+	sem common.Sem) {
 
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
@@ -77,6 +79,7 @@ func (r *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 	for {
 		select {
 		case res := <-resCh:
+			sem.Acquare()
 			if res.Err != nil {
 				r.rpcFailed++
 				log.Println("Failed to connect to RPC")
@@ -88,6 +91,7 @@ func (r *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 						res.EpochStartHeight += int64(res.EpochLength)
 					}
 				} else {
+					sem.Release()
 					continue
 				}
 			}
@@ -102,7 +106,6 @@ func (r *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 			log.Printf("LatestBlockHeight: %d\n", res.LatestBlockHeight)
 			log.Printf("EpochStartHeight: %d\n", res.EpochStartHeight)
 			log.Printf("Left Blocks: %d\n", leftBlocks)
-			var totalDelegatorsStakedBalance, totalDelegatorsUnStakedBalance int
 
 			r.expectedStake = getExpectedStake(r.poolId)
 			if r.expectedStake != 0 {
@@ -117,6 +120,7 @@ func (r *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 			log.Printf("Next stake: %d\n", res.NextStake)
 
 			// multiple delegator accounts
+			var totalDelegatorsStakedBalance, totalDelegatorsUnStakedBalance int
 			for _, delegatorId := range r.delegatorIds {
 				dsb, err := getDelegatorStakedBalance(r.poolId, delegatorId)
 				if err == nil {
@@ -151,14 +155,20 @@ func (r *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 				} else {
 					log.Printf("Success: %s\n", command)
 					epochStartHeight = res.EpochStartHeight
-					pingGauge.Set(float64(res.CurrentStake))
+					if res.CurrentStake == 0 {
+						pingGauge.Set(float64(100000))
+					} else {
+						pingGauge.Set(float64(res.CurrentStake))
+					}
 				}
 			}
 			if !r.fetchPrices(nextSeatPriceGauge, expectedSeatPriceGauge) {
+				sem.Release()
 				continue
 			}
 
 			if notInProposals || res.KickedOut {
+				sem.Release()
 				continue
 			}
 
@@ -171,6 +181,7 @@ func (r *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 				tokensAmountMap := getTokensAmountToRestake("unstake", r.delegatorStakedBalance, r.expectedStake, r.expectedSeatPrice)
 				if len(tokensAmountMap) == 0 {
 					log.Printf("You don't have enough staked balance\n")
+					sem.Release()
 					continue
 				}
 				// Run near unstake
@@ -183,6 +194,7 @@ func (r *Runner) Run(ctx context.Context, resCh chan *common.SubscrResult,
 			} else if seats >= 1.0 && seats < 1.001 {
 				log.Println("I'm okay")
 			}
+			sem.Release()
 		case <-ctx.Done():
 			return
 		case <-sigc:
@@ -200,7 +212,7 @@ func (r *Runner) restake(method string, tokensAmountMap map[string]int, restakeG
 		tokensAmountStr := common.GetStringFromStake(delegatorBalance)
 		stakeAmountGauge.Set(float64(delegatorBalance))
 
-		log.Printf("%s: Starting %s %d...\n", delegatorId, method, delegatorBalance)
+		log.Printf("%s: Starting %s %d NEAR\n", delegatorId, method, delegatorBalance)
 		err := runStake(r.poolId, method, tokensAmountStr, delegatorId)
 		if err != nil {
 			return false

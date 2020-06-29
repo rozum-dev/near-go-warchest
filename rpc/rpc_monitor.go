@@ -1,4 +1,4 @@
-package common
+package rpc
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	nearapi "github.com/masknetgoal634/go-warchest/client"
+	"github.com/masknetgoal634/go-warchest/common"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -37,13 +38,15 @@ func NewMonitor(client *nearapi.Client, poolId string) *Monitor {
 	}
 }
 
-func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdGauge prometheus.Gauge) {
-	t := GetIntFromString(repeatTime)
+func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common.Sem, thresholdGauge prometheus.Gauge) {
+	t := common.GetIntFromString(repeatTime)
 	ticker := time.NewTicker(time.Duration(t) * time.Second)
 	log.Printf("Subscribed for updates every %s seconds\n", repeatTime)
 	for {
 		select {
 		case <-ticker.C:
+			log.Println("Tick...")
+			sem.Acquare()
 			log.Println("Starting watch rpc")
 			sr, err := m.client.Get("status", nil)
 			if err != nil {
@@ -73,6 +76,7 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 				continue
 			}
 
+			thresholdGauge.Set(0)
 			var currentStake int
 			for _, v := range vr.Validators.CurrentValidators {
 				if v.AccountId == m.poolId {
@@ -83,14 +87,14 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 						log.Printf("Kicked out threshold: %f\n", threshold)
 					}
 					thresholdGauge.Set(threshold)
-					currentStake = GetStakeFromString(v.Stake)
+					currentStake = common.GetStakeFromString(v.Stake)
 				}
 			}
 
 			var nextStake int
 			for _, v := range vr.Validators.NextValidators {
 				if v.AccountId == m.poolId {
-					nextStake = GetStakeFromString(v.Stake)
+					nextStake = common.GetStakeFromString(v.Stake)
 				}
 			}
 
@@ -112,6 +116,7 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, thresholdG
 				Err:               nil,
 			}
 
+			sem.Release()
 			result <- m.result
 
 		case <-ctx.Done():

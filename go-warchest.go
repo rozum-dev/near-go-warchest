@@ -9,6 +9,7 @@ import (
 
 	nearapi "github.com/masknetgoal634/go-warchest/client"
 	"github.com/masknetgoal634/go-warchest/common"
+	"github.com/masknetgoal634/go-warchest/rpc"
 	"github.com/masknetgoal634/go-warchest/runner"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -110,10 +111,12 @@ func main() {
 	// Run a metrics service
 	go runMetricsService(registry, *addr)
 
-	monitor := common.NewMonitor(client, *poolId)
-	resCh := make(chan *common.SubscrResult)
+	monitor := rpc.NewMonitor(client, *poolId)
+	resCh := make(chan *rpc.SubscrResult)
+	// Quota for a concurrent rpc requests
+	sem := make(common.Sem, 1)
 	// Run a remote rpc monitor
-	go monitor.Run(ctx, resCh, thresholdGauge)
+	go monitor.Run(ctx, resCh, sem, thresholdGauge)
 
 	runner := runner.NewRunner(*poolId, delegatorIds)
 	// Run a near-shell runner
@@ -126,7 +129,8 @@ func main() {
 		expectedSeatPriceGauge,
 		expectedStakeGauge,
 		dStakedBalanceGauge,
-		dUnStakedBalanceGauge)
+		dUnStakedBalanceGauge,
+		sem)
 }
 
 func runMetricsService(registry prometheus.Gatherer, addr string) {
