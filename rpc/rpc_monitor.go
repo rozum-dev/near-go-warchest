@@ -45,7 +45,6 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 	for {
 		select {
 		case <-ticker.C:
-			log.Println("Tick...")
 			sem.Acquare()
 			log.Println("Starting watch rpc")
 			sr, err := m.client.Get("status", nil)
@@ -53,6 +52,7 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 				log.Println(err)
 				m.result.Err = err
 				result <- m.result
+				sem.Release()
 				continue
 			}
 
@@ -73,6 +73,7 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 				log.Println(err)
 				m.result.Err = err
 				result <- m.result
+				sem.Release()
 				continue
 			}
 
