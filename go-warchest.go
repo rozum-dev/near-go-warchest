@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 
-	nearapi "github.com/masknetgoal634/go-warchest/client"
 	"github.com/masknetgoal634/go-warchest/common"
 	"github.com/masknetgoal634/go-warchest/rpc"
+	nearapi "github.com/masknetgoal634/go-warchest/rpc/client"
 	"github.com/masknetgoal634/go-warchest/runner"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

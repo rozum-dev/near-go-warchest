@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	nearapi "github.com/masknetgoal634/go-warchest/client"
 	"github.com/masknetgoal634/go-warchest/common"
+	nearapi "github.com/masknetgoal634/go-warchest/rpc/client"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
