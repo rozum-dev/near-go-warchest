@@ -4,6 +4,12 @@
 
 This tool/service dynamically maintaining no more than one seat and export metrics for [monitoring](https://prometheus.io). It uses [JSON-RPC](https://docs.near.org/docs/interaction/rpc) and [Near Shell](https://github.com/near/near-shell/) command line interface.
 
+## Features
+
+- Dynamically maintaining between 1.0 - 1.001 seats because there is no reason to hold extra tokens
+- Prometheus metrics
+- Docker
+
 ## Usage
 
 ### Docker

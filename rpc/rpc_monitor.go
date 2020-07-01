@@ -27,8 +27,8 @@ type SubscrResult struct {
 
 type Monitor struct {
 	client *nearapi.Client
-	poolId string
 	result *SubscrResult
+	poolId string
 }
 
 func NewMonitor(client *nearapi.Client, poolId string) *Monitor {
@@ -50,9 +50,9 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 			sr, err := m.client.Get("status", nil)
 			if err != nil {
 				log.Println(err)
+				sem.Release()
 				m.result.Err = err
 				result <- m.result
-				sem.Release()
 				continue
 			}
 
@@ -71,9 +71,9 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 			vr, err := m.client.Get("validators", []uint64{blockHeight})
 			if err != nil {
 				log.Println(err)
+				sem.Release()
 				m.result.Err = err
 				result <- m.result
-				sem.Release()
 				continue
 			}
 
@@ -108,8 +108,8 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 			}
 
 			m.result = &SubscrResult{
-				LatestBlockHeight: int64(blockHeight),
 				EpochStartHeight:  vr.Validators.EpochStartHeight,
+				LatestBlockHeight: int64(blockHeight),
 				EpochLength:       epochLength,
 				CurrentStake:      currentStake,
 				NextStake:         nextStake,

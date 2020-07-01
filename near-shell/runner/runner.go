@@ -15,14 +15,12 @@ import (
 )
 
 type Runner struct {
-	poolId                                             string
+	poolId, defaultDelegatorId                         string
 	delegatorIds                                       []string
-	defaultDelegatorId                                 string
-	delegatorStakedBalance, delegatorUnStakedBalance   map[string]int
-	restaked                                           bool
-	currentSeatPrice, nextSeatPrice, expectedSeatPrice int
 	expectedStake                                      int
 	rpcSuccess, rpcFailed                              int
+	delegatorStakedBalance, delegatorUnStakedBalance   map[string]int
+	currentSeatPrice, nextSeatPrice, expectedSeatPrice int
 }
 
 func NewRunner(poolId string, delegatorIds []string) *Runner {
