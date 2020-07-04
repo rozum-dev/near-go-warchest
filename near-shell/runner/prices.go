@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"log"
 
 	"github.com/masknetgoal634/go-warchest/common"
@@ -8,10 +9,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (r *Runner) fetchPrices(nextSeatPriceGauge, expectedSeatPriceGauge prometheus.Gauge) bool {
+func (r *Runner) fetchPrices(ctx context.Context, nextSeatPriceGauge, expectedSeatPriceGauge prometheus.Gauge) bool {
 	if r.currentSeatPrice == 0 {
 		// Current seat price
-		csp, err := getSeatPrice(currentSeatPriceCmd)
+		csp, err := getSeatPrice(ctx, currentSeatPriceCmd)
 		if err != nil {
 			log.Println("Failed to get currentSeatPrice")
 			if r.currentSeatPrice == 0 {
@@ -23,7 +24,7 @@ func (r *Runner) fetchPrices(nextSeatPriceGauge, expectedSeatPriceGauge promethe
 		log.Printf("Current seat price %d\n", r.currentSeatPrice)
 	}
 	// Next seat price
-	nsp, err := getSeatPrice(nextSeatPriceCmd)
+	nsp, err := getSeatPrice(ctx, nextSeatPriceCmd)
 	if err != nil {
 		log.Println("Failed to get nextSeatPrice")
 		if r.nextSeatPrice == 0 {
@@ -36,7 +37,7 @@ func (r *Runner) fetchPrices(nextSeatPriceGauge, expectedSeatPriceGauge promethe
 	nextSeatPriceGauge.Set(float64(r.nextSeatPrice))
 
 	// Expected seat price
-	esp, err := getSeatPrice(proposalsSeatPriceCmd)
+	esp, err := getSeatPrice(ctx, proposalsSeatPriceCmd)
 	if err != nil {
 		log.Println("Failed to get expectedSeatPrice")
 		if r.expectedSeatPrice == 0 {
@@ -50,8 +51,8 @@ func (r *Runner) fetchPrices(nextSeatPriceGauge, expectedSeatPriceGauge promethe
 	return true
 }
 
-func getSeatPrice(command string) (int, error) {
-	r, err := cmd.Run(command)
+func getSeatPrice(ctx context.Context, command string) (int, error) {
+	r, err := cmd.Run(ctx, command)
 	if err != nil {
 		log.Printf("Failed to run %s", command)
 		return 0, err

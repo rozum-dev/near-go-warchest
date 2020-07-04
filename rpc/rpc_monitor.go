@@ -42,15 +42,21 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 	t := common.GetIntFromString(repeatTime)
 	ticker := time.NewTicker(time.Duration(t) * time.Second)
 	log.Printf("Subscribed for updates every %s seconds\n", repeatTime)
+	var acquared bool
 	for {
 		select {
 		case <-ticker.C:
-			sem.Acquare()
+			if acquared {
+				continue
+			}
+			acquared = sem.Acquare()
+
 			log.Println("Starting watch rpc")
+
 			sr, err := m.client.Get("status", nil)
 			if err != nil {
 				log.Println(err)
-				sem.Release()
+				acquared = sem.Release()
 				m.result.Err = err
 				result <- m.result
 				continue
@@ -71,7 +77,7 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 			vr, err := m.client.Get("validators", []uint64{blockHeight})
 			if err != nil {
 				log.Println(err)
-				sem.Release()
+				acquared = sem.Release()
 				m.result.Err = err
 				result <- m.result
 				continue
@@ -117,7 +123,7 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 				Err:               nil,
 			}
 
-			sem.Release()
+			acquared = sem.Release()
 			result <- m.result
 
 		case <-ctx.Done():

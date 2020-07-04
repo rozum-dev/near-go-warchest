@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sort"
@@ -11,7 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func restake(poolId, method string, tokensAmountMap map[string]int, restakeGauge, stakeAmountGauge prometheus.Gauge) bool {
+func restake(ctx context.Context, poolId, method string, tokensAmountMap map[string]int, restakeGauge, stakeAmountGauge prometheus.Gauge) bool {
 	if len(tokensAmountMap) == 0 {
 		return false
 	}
@@ -20,7 +21,7 @@ func restake(poolId, method string, tokensAmountMap map[string]int, restakeGauge
 		stakeAmountGauge.Set(float64(delegatorBalance))
 
 		log.Printf("%s: Starting %s %d NEAR\n", delegatorId, method, delegatorBalance)
-		err := runStake(poolId, method, tokensAmountStr, delegatorId)
+		err := runStake(ctx, poolId, method, tokensAmountStr, delegatorId)
 		if err != nil {
 			return false
 		}
@@ -31,8 +32,8 @@ func restake(poolId, method string, tokensAmountMap map[string]int, restakeGauge
 	return true
 }
 
-func runStake(poolId, method, amount, delegatorId string) error {
-	_, err := cmd.Run(fmt.Sprintf(stakeCmd, poolId, method, amount, delegatorId))
+func runStake(ctx context.Context, poolId, method, amount, delegatorId string) error {
+	_, err := cmd.Run(ctx, fmt.Sprintf(stakeCmd, poolId, method, amount, delegatorId))
 	if err != nil {
 		log.Println(err)
 		return err
@@ -40,8 +41,8 @@ func runStake(poolId, method, amount, delegatorId string) error {
 	return nil
 }
 
-func getExpectedStake(accountId string) int {
-	currentProp, err := cmd.Run(fmt.Sprintf(proposalsCmd, accountId))
+func getExpectedStake(ctx context.Context, accountId string) int {
+	currentProp, err := cmd.Run(ctx, fmt.Sprintf(proposalsCmd, accountId))
 	if err != nil {
 		log.Printf("Failed to run proposalsCmd")
 		return 0

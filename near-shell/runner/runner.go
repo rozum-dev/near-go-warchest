@@ -80,7 +80,7 @@ func (r *Runner) Run(ctx context.Context, resCh chan *rpc.SubscrResult, m *prom.
 			log.Printf("EpochStartHeight: %d\n", res.EpochStartHeight)
 			log.Printf("Left Blocks: %d\n", leftBlocks)
 
-			r.expectedStake = getExpectedStake(r.poolId)
+			r.expectedStake = getExpectedStake(ctx, r.poolId)
 			if r.expectedStake != 0 {
 				log.Printf("Expected stake: %d\n", r.expectedStake)
 				notInProposals = false
@@ -95,14 +95,14 @@ func (r *Runner) Run(ctx context.Context, resCh chan *rpc.SubscrResult, m *prom.
 			// multiple delegator accounts
 			var totalDelegatorsStakedBalance, totalDelegatorsUnStakedBalance int
 			for _, delegatorId := range r.delegatorIds {
-				dsb, err := getDelegatorStakedBalance(r.poolId, delegatorId)
+				dsb, err := getDelegatorStakedBalance(ctx, r.poolId, delegatorId)
 				if err == nil {
 					r.delegatorStakedBalance[delegatorId] = dsb
 					totalDelegatorsStakedBalance += dsb
 				}
 				log.Printf("%s staked balance: %d\n", delegatorId, dsb)
 
-				dusb, err := getDelegatorUnStakedBalance(r.poolId, delegatorId)
+				dusb, err := getDelegatorUnStakedBalance(ctx, r.poolId, delegatorId)
 				if err == nil {
 					r.delegatorUnStakedBalance[delegatorId] = dusb
 					totalDelegatorsUnStakedBalance += dusb
@@ -122,7 +122,7 @@ func (r *Runner) Run(ctx context.Context, resCh chan *rpc.SubscrResult, m *prom.
 				// If the new epoch then ping
 				log.Println("Starting ping...")
 				command := fmt.Sprintf(pingCmd, r.poolId, r.defaultDelegatorId)
-				_, err := cmd.Run(command)
+				_, err := cmd.Run(ctx, command)
 				if err != nil {
 					m.PingGauge.Set(0)
 				} else {
@@ -135,7 +135,7 @@ func (r *Runner) Run(ctx context.Context, resCh chan *rpc.SubscrResult, m *prom.
 					}
 				}
 			}
-			if !r.fetchPrices(m.NextSeatPriceGauge, m.ExpectedSeatPriceGauge) {
+			if !r.fetchPrices(ctx, m.NextSeatPriceGauge, m.ExpectedSeatPriceGauge) {
 				sem.Release()
 				continue
 			}
@@ -158,12 +158,12 @@ func (r *Runner) Run(ctx context.Context, resCh chan *rpc.SubscrResult, m *prom.
 					continue
 				}
 				// Run near unstake
-				restake(r.poolId, "unstake", tokensAmountMap, m.RestakeGauge, m.StakeAmountGauge)
+				restake(ctx, r.poolId, "unstake", tokensAmountMap, m.RestakeGauge, m.StakeAmountGauge)
 			} else if seats < 1.0 {
 				log.Printf("You don't have enough stake to get one seat: %f\n", seats)
 				tokensAmountMap := getTokensAmountToRestake("stake", r.delegatorUnStakedBalance, r.expectedStake, r.expectedSeatPrice)
 				// Run near stake
-				restake(r.poolId, "stake", tokensAmountMap, m.RestakeGauge, m.StakeAmountGauge)
+				restake(ctx, r.poolId, "stake", tokensAmountMap, m.RestakeGauge, m.StakeAmountGauge)
 			} else if seats >= 1.0 && seats < 1.001 {
 				log.Println("I'm okay")
 			}
