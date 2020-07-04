@@ -2,12 +2,10 @@ package common
 
 type Sem chan struct{}
 
-func (s Sem) Acquare() bool {
+func (s Sem) Acquare() {
 	s <- struct{}{}
-	return true
 }
 
-func (s Sem) Release() bool {
+func (s Sem) Release() {
 	<-s
-	return false
 }
