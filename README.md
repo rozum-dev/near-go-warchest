@@ -7,6 +7,8 @@ This tool/service dynamically maintaining no more than one seat and export metri
 ## Features
 
 - Dynamically maintaining between 1.0 - 1.001 seats because there is no reason to hold extra tokens
+- Supporting multi delegate accounts
+- ping() with a new epoch
 - Prometheus metrics
 - Docker
 
