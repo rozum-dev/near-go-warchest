@@ -10,6 +10,12 @@ This tool/service dynamically maintaining no more than one seat and export metri
 - Prometheus metrics
 - Docker
 
+## Install Docker
+```
+sudo apt-get update
+sudo apt install docker.io
+```
+
 ## Usage
 
 ### Docker
