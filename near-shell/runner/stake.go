@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/masknetgoal634/go-warchest/common"
-	cmd "github.com/masknetgoal634/go-warchest/helpers"
+	"github.com/rozum-dev/near-go-warchest/common"
+	cmd "github.com/rozum-dev/near-go-warchest/helpers"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -34,6 +34,7 @@ func restake(ctx context.Context, poolId, method string, tokensAmountMap map[str
 
 func runStake(ctx context.Context, poolId, method, amount, delegatorId string) error {
 	_, err := cmd.Run(ctx, fmt.Sprintf(stakeCmd, poolId, method, amount, delegatorId))
+	log.Printf("Stake | unstake %s \n", fmt.Sprintf(stakeCmd, poolId, method, amount, delegatorId))
 	if err != nil {
 		log.Println(err)
 		return err
@@ -44,7 +45,7 @@ func runStake(ctx context.Context, poolId, method, amount, delegatorId string) e
 func getExpectedStake(ctx context.Context, accountId string) int {
 	currentProp, err := cmd.Run(ctx, fmt.Sprintf(proposalsCmd, accountId))
 	if err != nil {
-		log.Printf("Failed to run proposalsCmd")
+		log.Printf("Failed to run proposalsCmd, %s",fmt.Sprintf(proposalsCmd, accountId) )
 		return 0
 	}
 	if currentProp != "" {

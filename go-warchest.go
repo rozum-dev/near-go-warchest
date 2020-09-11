@@ -5,11 +5,11 @@ import (
 	"flag"
 	"log"
 
-	"github.com/masknetgoal634/go-warchest/common"
-	"github.com/masknetgoal634/go-warchest/near-shell/runner"
-	"github.com/masknetgoal634/go-warchest/rpc"
-	nearapi "github.com/masknetgoal634/go-warchest/rpc/client"
-	prom "github.com/masknetgoal634/go-warchest/services/prometheus"
+	"github.com/rozum-dev/near-go-warchest/common"
+	"github.com/rozum-dev/near-go-warchest/near-shell/runner"
+	"github.com/rozum-dev/near-go-warchest/rpc"
+	nearapi "github.com/rozum-dev/near-go-warchest/rpc/client"
+	prom "github.com/rozum-dev/near-go-warchest/services/prometheus"
 )
 
 type arrayFlags []string

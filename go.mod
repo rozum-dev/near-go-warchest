@@ -1,4 +1,4 @@
-module github.com/masknetgoal634/go-warchest
+module github.com/rozum-dev/near-go-warchest
 
 go 1.13
 

@@ -138,6 +138,9 @@ func (c *Client) do(method string, params interface{}) (string, error) {
 		log.Printf("Failed to read body: %s\n", c.Endpoint)
 		return "", nil
 	}
+
+	//log.Printf("body %s\n %s\n", method, body)
+
 	return string(body), nil
 }
 
@@ -147,6 +150,9 @@ func (c *Client) Get(method string, variables interface{}) (*Result, error) {
 		return nil, err
 	}
 	var d Result
+
+	//log.Printf("res1 %s\n %s\n", method, res)
+
 	res = strings.Replace(res, "result", fmt.Sprintf("%s_%s", "result", method), -1)
 	r := bytes.NewReader([]byte(res))
 	err2 := json.NewDecoder(r).Decode(&d)
@@ -154,5 +160,7 @@ func (c *Client) Get(method string, variables interface{}) (*Result, error) {
 		log.Println(err2)
 		return nil, err2
 	}
+	//log.Printf("res2 %s\n %s\n", method, res)
+
 	return &d, nil
 }

@@ -3,13 +3,15 @@ package runner
 import (
 	"context"
 	"fmt"
-
-	"github.com/masknetgoal634/go-warchest/common"
-	cmd "github.com/masknetgoal634/go-warchest/helpers"
+	// "log"
+	"github.com/rozum-dev/near-go-warchest/common"
+	cmd "github.com/rozum-dev/near-go-warchest/helpers"
 )
 
 func getDelegatorStakedBalance(ctx context.Context, poolId, delegatorId string) (int, error) {
 	r, err := cmd.Run(ctx, fmt.Sprintf(getStakedBalanceCmd, poolId, delegatorId))
+		// log.Printf("getStakedBalanceCmd, %s",fmt.Sprintf(getStakedBalanceCmd, poolId, delegatorId) )
+
 	if err != nil {
 		return 0, err
 	}
@@ -18,6 +20,8 @@ func getDelegatorStakedBalance(ctx context.Context, poolId, delegatorId string) 
 
 func getDelegatorUnStakedBalance(ctx context.Context, poolId, delegatorId string) (int, error) {
 	r, err := cmd.Run(ctx, fmt.Sprintf(getUnStakedBalanceCmd, poolId, delegatorId))
+		// log.Printf("getUnStakedBalanceCmd, %s",fmt.Sprintf(getUnStakedBalanceCmd, poolId, delegatorId) )
+
 	if err != nil {
 		return 0, err
 	}

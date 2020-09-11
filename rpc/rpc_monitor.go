@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/masknetgoal634/go-warchest/common"
-	nearapi "github.com/masknetgoal634/go-warchest/rpc/client"
-	prom "github.com/masknetgoal634/go-warchest/services/prometheus"
+	"github.com/rozum-dev/near-go-warchest/common"
+	nearapi "github.com/rozum-dev/near-go-warchest/rpc/client"
+	prom "github.com/rozum-dev/near-go-warchest/services/prometheus"
 )
 
 var (
@@ -81,8 +81,11 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 
 			metrics.ThresholdGauge.Set(0)
 			var currentStake int
+
 			for _, v := range vr.Validators.CurrentValidators {
+
 				if v.AccountId == m.poolId {
+
 					pb := float64(v.NumProducedBlocks)
 					eb := float64(v.NumExpectedBlocks)
 					threshold := (pb / eb) * 100
@@ -90,6 +93,7 @@ func (m *Monitor) Run(ctx context.Context, result chan *SubscrResult, sem common
 						log.Printf("Kicked out threshold: %f\n", threshold)
 					}
 					metrics.ThresholdGauge.Set(threshold)
+
 					currentStake = common.GetStakeFromString(v.Stake)
 				}
 			}

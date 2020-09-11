@@ -4,16 +4,18 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"log"
 )
 
 func GetStakeFromString(s string) int {
+	log.Print("Logging in Go!", s)
 	if len(s) == 1 {
 		return 0
 	}
 	l := len(s) - 19 - 5
 	v, err := strconv.ParseFloat(s[0:l], 64)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("fuck it")
 	}
 	return int(v)
 }

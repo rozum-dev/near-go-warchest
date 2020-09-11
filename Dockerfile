@@ -22,11 +22,11 @@ ENV NODE_PATH $NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
 ENV PATH      $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
 # install near-shell
-RUN  npm install -g near-shell
+RUN npm install -g near-shell
 
 # install go
-RUN wget https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz
-RUN tar -xvf go1.14.2.linux-amd64.tar.gz
+RUN wget https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz
+RUN tar -xvf go1.13.3.linux-amd64.tar.gz
 RUN mv go /usr/local
 RUN echo 'export GOROOT=/usr/local/go' >> ~/.profile
 RUN echo 'export GOPATH=$HOME/go' >> ~/.profile
@@ -43,7 +43,8 @@ WORKDIR /build
 
 COPY go.mod .
 COPY go.sum .
-RUN go mod download
+
+# RUN go mod download
 
 COPY . .
 
