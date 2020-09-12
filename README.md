@@ -1,5 +1,6 @@
-# Near Go Warchest Bot.
+This repository is a [fork](https://github/masknetgoal634/near-go-warchest)  of this [guy](https://github/masknetgoal634/near-go-warchest) with minor fixes and improvements.
 
+# Near Go Warchest Bot.
 This tool/service dynamically maintaining no more than one seat and export metrics for [monitoring](https://prometheus.io). It uses [JSON-RPC](https://docs.near.org/docs/interaction/rpc) and [Near Shell](https://github.com/near/near-shell/) command line interface.
 
 ## Features
@@ -20,40 +21,29 @@ sudo apt install docker.io
 
 ### Docker
 
-You can deploy using the [masknetgoal634/near-go-warchest](https://hub.docker.com/r/masknetgoal634/near-go-warchest) Docker image.
+- Download only [env2.list file](https://github.com/rozum-dev/near-go-warchest/blob/test/env2.list) in any directory ( */home/root/near-go-warchest* for example)
+> **IMPORTANTS!!!** All commands need run in directory, where you saved env2.list file!!!
 
-    git clone https://github.com/masknetgoal634/near-go-warchest
+- sudo docker pull dmytro1rozum/go-warchest:tagname (download docker image)
 
-    cd near-go-warchest
+- sudo docker run -dti --restart always --volume $HOME/near/.near-credentials:/root/.near-credentials --name go-warchest --network=host --env-file env2.list -p 9444:9444 dmytro1rozum/go-warchest:latest /dist/go-warchest -accountId <YOUR_POOL_ID>  -delegatorId <YOUR_DELEGATOR_ID>
+> make sure you have a keys of your delegator account at `$HOME/.near-credential`.
+> you can use multiple **delegatorId** one after the other ( sudo docker run ........ -delegatorId <YOUR_DELEGATOR1_ID> -delegatorId <YOUR_DELEGATOR2_ID> )
 
-Make sure you have a keys of your delegator account at `$HOME/.near-credential`.
+- it's all. To check, run **sudo docker logs go-warchest -f**, and if you want to destroy, run **sudo docker rm go-warchest -f**
 
-```
-sudo docker run -dti \
-     --restart always \
-     --volume $HOME/.near-credentials:/root/.near-credentials \
-     --name go-warchest \
-     --network=host \
-     --env-file env.list \
-     -p 9444:9444 \ 
-     masknetgoal634/near-go-warchest:latest /dist/go-warchest -accountId <YOUR_POOL_ID> -delegatorId <YOUR_DELEGATOR1_ID> -delegatorId <YOUR_DELEGATOR2_ID>
-```
 
-To watch the logs: 
-
-    sudo docker logs go-warchest -f
 
 ### Without Docker
 
 Intall and/or update Go. You need to have 1.13 at least
 https://medium.com/@khongwooilee/how-to-update-the-go-version-6065f5c8c3ec
 
-
 You have to install [Near Shell](https://github.com/near/near-shell/).
 
 Make sure you have a keys of your delegator account at `$HOME/.near-credential`.
 
-    git clone https://github.com/masknetgoal634/near-go-warchest
+    git clone https://github/masknetgoal634/near-go-warchest
 
     cd near-go-warchest
 
