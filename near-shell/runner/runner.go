@@ -149,7 +149,7 @@ func (r *Runner) Run(ctx context.Context, resCh chan *rpc.SubscrResult, m *prom.
 			seats := float64(r.expectedStake) / float64(r.expectedSeatPrice)
 			log.Printf("Expected seats: %f", seats)
 
-			if seats > 1.001 { //&& leftBlocks < 1000 {
+			if seats > 1.001 && leftBlocks < 1000 {
 				log.Printf("You retain %f seats\n", seats)
 				tokensAmountMap := getTokensAmountToRestake("unstake", r.delegatorStakedBalance, r.expectedStake, r.expectedSeatPrice)
 				if len(tokensAmountMap) == 0 {
@@ -159,7 +159,7 @@ func (r *Runner) Run(ctx context.Context, resCh chan *rpc.SubscrResult, m *prom.
 				}
 				// Run near unstake
 				restake(ctx, r.poolId, "unstake", tokensAmountMap, m.RestakeGauge, m.StakeAmountGauge)
-			} else if seats < 1.0 { //&& leftBlocks < 1000 {
+			} else if seats < 1.0 && leftBlocks < 1000 {
 				log.Printf("You don't have enough stake to get one seat: %f\n", seats)
 				tokensAmountMap := getTokensAmountToRestake("stake", r.delegatorUnStakedBalance, r.expectedStake, r.expectedSeatPrice)
 				// Run near stake
