@@ -45,7 +45,7 @@ To watch the logs:
 
 ### Without Docker
 
-Intall and/or uddate Go. You need to have 1.13 at least
+Intall and/or update Go. You need to have 1.13 at least
 https://medium.com/@khongwooilee/how-to-update-the-go-version-6065f5c8c3ec
 
 
