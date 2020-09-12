@@ -43,7 +43,11 @@ To watch the logs:
 
     sudo docker logs go-warchest -f
 
-### Without Docker (Not tested)
+### Without Docker
+
+Intall and/or uddate Go. You need to have 1.13 at least
+https://medium.com/@khongwooilee/how-to-update-the-go-version-6065f5c8c3ec
+
 
 You have to install [Near Shell](https://github.com/near/near-shell/).
 
