@@ -21,14 +21,17 @@ sudo apt install docker.io
 
 ### Docker
 
+```
+    git clone https://github.com/rozum-dev/near-go-warchest
 
-git clone https://github.com/rozum-dev/near-go-warchest
+    cd near-go-warchest
 
-cd near-go-warchest
+    sudo docker pull dmytro1rozum/go-warchest:tagname (download docker image)
 
-- sudo docker pull dmytro1rozum/go-warchest:tagname (download docker image)
+    sudo docker run -dti --restart always --volume $HOME/near/.near-credentials:/root/.near-credentials --name go-warchest --network=host --env-file env2.list -p 9444:9444 dmytro1rozum/go-warchest:latest /dist/go-warchest -accountId <YOUR_POOL_ID>  -delegatorId <YOUR_DELEGATOR_ID>
 
-- sudo docker run -dti --restart always --volume $HOME/near/.near-credentials:/root/.near-credentials --name go-warchest --network=host --env-file env2.list -p 9444:9444 dmytro1rozum/go-warchest:latest /dist/go-warchest -accountId <YOUR_POOL_ID>  -delegatorId <YOUR_DELEGATOR_ID>
+```
+
 > make sure you have a keys of your delegator account at `$HOME/.near-credential`.
 
 
