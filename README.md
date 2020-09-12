@@ -1,5 +1,6 @@
-# Near Go Warchest Bot.
+This repository is a [fork](https://github/masknetgoal634/near-go-warchest)  of this [guy](https://github/masknetgoal634/near-go-warchest) with minor fixes and improvements.
 
+# Near Go Warchest Bot.
 This tool/service dynamically maintaining no more than one seat and export metrics for [monitoring](https://prometheus.io). It uses [JSON-RPC](https://docs.near.org/docs/interaction/rpc) and [Near Shell](https://github.com/near/near-shell/) command line interface.
 
 ## Features
@@ -20,36 +21,31 @@ sudo apt install docker.io
 
 ### Docker
 
-You can deploy using the [masknetgoal634/near-go-warchest](https://hub.docker.com/r/masknetgoal634/near-go-warchest) Docker image.
 
-    git clone https://github.com/masknetgoal634/near-go-warchest
+git clone https://github.com/rozum-dev/near-go-warchest
 
-    cd near-go-warchest
+cd near-go-warchest
 
-Make sure you have a keys of your delegator account at `$HOME/.near-credential`.
+- sudo docker pull dmytro1rozum/go-warchest:tagname (download docker image)
 
-```
-sudo docker run -dti \
-     --restart always \
-     --volume $HOME/.near-credentials:/root/.near-credentials \
-     --name go-warchest \
-     --network=host \
-     --env-file env.list \
-     -p 9444:9444 \ 
-     masknetgoal634/near-go-warchest:latest /dist/go-warchest -accountId <YOUR_POOL_ID> -delegatorId <YOUR_DELEGATOR1_ID> -delegatorId <YOUR_DELEGATOR2_ID>
-```
+- sudo docker run -dti --restart always --volume $HOME/near/.near-credentials:/root/.near-credentials --name go-warchest --network=host --env-file env2.list -p 9444:9444 dmytro1rozum/go-warchest:latest /dist/go-warchest -accountId <YOUR_POOL_ID>  -delegatorId <YOUR_DELEGATOR_ID>
+> make sure you have a keys of your delegator account at `$HOME/.near-credential`.
 
-To watch the logs: 
 
-    sudo docker logs go-warchest -f
+- thats's all. To check, run **sudo docker logs go-warchest -f**, and if you want to stop, run **sudo docker rm go-warchest -f**
 
-### Without Docker (Not tested)
+
+
+### Without Docker
+
+Intall and/or update Go. You need to have 1.13 at least
+https://medium.com/@khongwooilee/how-to-update-the-go-version-6065f5c8c3ec
 
 You have to install [Near Shell](https://github.com/near/near-shell/).
 
 Make sure you have a keys of your delegator account at `$HOME/.near-credential`.
 
-    git clone https://github.com/masknetgoal634/near-go-warchest
+    git clone https://github.com/rozum-dev/near-go-warchest
 
     cd near-go-warchest
 
