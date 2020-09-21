@@ -149,6 +149,10 @@ func (r *Runner) Run(ctx context.Context, resCh chan *rpc.SubscrResult, m *prom.
 			seats := float64(r.expectedStake) / float64(r.expectedSeatPrice)
 			log.Printf("Expected seats: %f", seats)
 
+			if leftBlocks > 1000 {
+				log.Printf("Too early tp stake/unstake, left blocks = %d", leftBlocks)
+			}
+
 			if seats > 1.001 && leftBlocks < 1000 {
 				log.Printf("You retain %f seats\n", seats)
 				tokensAmountMap := getTokensAmountToRestake("unstake", r.delegatorStakedBalance, r.expectedStake, r.expectedSeatPrice)

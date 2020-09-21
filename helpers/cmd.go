@@ -12,7 +12,7 @@ func Run(ctx context.Context, cmd string) (string, error) {
 	c, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	// fmt.Printf("Try to run command %s\n", cmd)
+	 fmt.Printf("Try to run command %s\n", cmd)
 	out, err := exec.CommandContext(c, "bash", "-c", cmd).Output()
 
 
